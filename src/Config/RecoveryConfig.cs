@@ -54,7 +54,8 @@ namespace SteelSoulRecovery.Config
                 "Diagnostics",
                 "DumpSaveProfileUi",
                 false,
-                "把存档界面与清除存档确认框的 UI 层级写进日志 (排查界面注入问题时打开)");
+                "排查用的一整套日志: 运行位置与实际存档目录, 每个槽位的判定结果, 槽位点击事件, "
+                + "清除存档的调用栈, 以及存档界面与清除存档确认框的 UI 层级 (含 EventTrigger 布线)");
         }
 
         internal ConfigEntry<bool> Enabled { get; private set; }

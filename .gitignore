@@ -5,7 +5,7 @@
 # 本机的游戏目录写在 SilksongPath.props 里, 不入版本库.
 SilksongPath.props
 
-# 拉起来的隔离子实例 (真实副本 + 目录联接).
+# 拉起来的隔离子实例 (真实副本 + 目录联接), 实例的存档与日志也在这个目录里.
 /game/Hollow Knight Silksong
 
 *.user

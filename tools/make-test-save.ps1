@@ -8,12 +8,12 @@
 #   pwsh -File tools/make-test-save.ps1 -Slot 1
 #   pwsh -File tools/make-test-save.ps1 -Source '<一份 user2.dat>' -Slot 2 -Mode On -Force
 #
-# 默认写到隔离子实例 (公司名 Team Cherry Mod) 的存档目录, 不会碰真存档.
+# -SaveDir 缺省取隔离子实例的存档目录 (读实例 app.info 现算), 不会碰真存档.
 
 [CmdletBinding()]
 param(
     [string]$Source = (Join-Path $PSScriptRoot 'template\steel-soul-dead.json.gz'),
-    [string]$SaveDir = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Team Cherry Mod\Hollow Knight Silksong\default'),
+    [string]$SaveDir,
     [int]$Slot = 1,
     [ValidateSet('Dead', 'On', 'Off')][string]$Mode = 'Dead',
     [switch]$Force
@@ -25,11 +25,17 @@ $ErrorActionPreference = 'Stop'
 $modeValues = @{ Off = 0; On = 1; Dead = 2 }
 
 . (Join-Path $PSScriptRoot 'SaveCodec.ps1')
+. (Join-Path $PSScriptRoot 'instance-paths.ps1')
 
 function Write-Step {
     param([string]$Message)
 
     Write-Host "[test-save] $Message"
+}
+
+if (-not $SaveDir) {
+    $SaveDir = Get-InstanceSaveDirectory
+    Write-Step "存档目录 (实例的 savedata): $SaveDir"
 }
 
 if (-not (Test-Path -LiteralPath $Source)) {

@@ -15,6 +15,13 @@ namespace SteelSoulRecovery.Patches
         {
             try
             {
+                SteelSoulRecoveryPlugin plugin = SteelSoulRecoveryPlugin.Instance;
+                if (plugin != null && plugin.Settings.DumpSaveProfileUi.Value)
+                {
+                    plugin.Log.LogInfo(
+                        "打开了清除存档确认框 -> " + SaveSlotClassificationPatch.Describe(__instance));
+                }
+
                 PromptOption.Sync(__instance);
             }
             catch (Exception exception)

@@ -74,6 +74,8 @@ namespace SteelSoulRecovery
             {
                 _hotkey.Tick();
             }
+
+            Diagnostics.SaveStoreProbe.MaybeDumpLocation();
         }
 
         private void OnDestroy()

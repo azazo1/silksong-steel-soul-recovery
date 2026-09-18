@@ -3,6 +3,7 @@ using System.Text;
 using BepInEx.Logging;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace SteelSoulRecovery.Diagnostics
@@ -189,6 +190,12 @@ namespace SteelSoulRecovery.Diagnostics
                         builder.Append(' ').Append(typeName);
                         break;
                 }
+
+                EventTrigger trigger = component as EventTrigger;
+                if (trigger != null)
+                {
+                    builder.Append(Describe(trigger));
+                }
             }
 
             builder.Append(" }");
@@ -212,6 +219,39 @@ namespace SteelSoulRecovery.Diagnostics
         private static string NameOf(Selectable selectable)
         {
             return selectable != null ? selectable.name : "-";
+        }
+
+        // EventTrigger 里那些持久化(预制体里连好的)调用是看不见的, 但它正是"按了按钮却触发了别的动作"的来源,
+        // 所以把每个条目的目标物体与方法名都列出来.
+        private static string Describe(EventTrigger trigger)
+        {
+            StringBuilder builder = new StringBuilder(" EventTrigger[");
+            builder.Append(trigger.triggers.Count).Append(']');
+
+            foreach (EventTrigger.Entry entry in trigger.triggers)
+            {
+                if (entry == null || entry.callback == null)
+                {
+                    continue;
+                }
+
+                builder.Append(' ').Append(entry.eventID).Append("->");
+                int count = entry.callback.GetPersistentEventCount();
+                if (count == 0)
+                {
+                    builder.Append("(无持久调用)");
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    UnityEngine.Object target = entry.callback.GetPersistentTarget(i);
+                    Component component = target as Component;
+                    string targetName = component != null ? component.gameObject.name : (target != null ? target.name : "null");
+                    builder.Append(targetName).Append('.').Append(entry.callback.GetPersistentMethodName(i)).Append(';');
+                }
+            }
+
+            return builder.ToString();
         }
     }
 }

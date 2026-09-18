@@ -6,6 +6,7 @@ using SteelSoulRecovery.Diagnostics;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace SteelSoulRecovery.Ui
@@ -18,7 +19,8 @@ namespace SteelSoulRecovery.Ui
     {
         internal const string OptionName = "SteelSoulRecoveryOption";
 
-        private const float Gap = 6f;
+        // 量不出按钮间距时, 用按钮高度的这个比例当间距.
+        private const float GapRatio = 0.35f;
 
         private const float FallbackWidth = 260f;
 
@@ -111,11 +113,79 @@ namespace SteelSoulRecovery.Ui
                 return null;
             }
 
-            // 克隆会把模板上原有的持久化监听一起带过来, 整个换掉最干净.
+            // 克隆会把模板上原有的持久化监听一起带过来, 包括 EventTrigger 里那些直接指向槽位
+            // (比如"是"按钮上挂着的 ClearSaveConfirmPrompt), 只换 OnSubmitPressed 是不够的 --
+            // 那样按我们的按钮会同时触发游戏自己的清除存档流程. 先全部清掉, 再挂我们自己的.
+            int stripped = StripListeners(clone);
+
+            // 光清监听还不够保险: EventTrigger 组件本身留着, 以后谁往里加东西都会重新接上游戏的动作.
+            // 我们的按钮只依赖 MenuButton 的点击处理, 所以整个组件删掉.
+            int triggersRemoved = 0;
+            foreach (EventTrigger trigger in clone.GetComponentsInChildren<EventTrigger>(true))
+            {
+                UnityEngine.Object.Destroy(trigger);
+                triggersRemoved++;
+            }
+
             button.OnSubmitPressed = new UnityEvent();
             button.OnSubmitPressed.AddListener(onClick);
             button.interactable = true;
+
+            SteelSoulRecoveryPlugin.Instance.Log.LogInfo(string.Format(
+                "恢复选项: 克隆按钮时清掉了 {0} 处游戏原有的监听, 删掉 {1} 个 EventTrigger",
+                stripped,
+                triggersRemoved));
+
             return button;
+        }
+
+        // 把克隆体上所有 UnityEvent 型监听清空 (含 EventTrigger 的每个条目).
+        private static int StripListeners(GameObject clone)
+        {
+            int stripped = 0;
+
+            foreach (Component component in clone.GetComponentsInChildren<Component>(true))
+            {
+                if (component == null)
+                {
+                    continue;
+                }
+
+                EventTrigger trigger = component as EventTrigger;
+                if (trigger != null)
+                {
+                    foreach (EventTrigger.Entry entry in trigger.triggers)
+                    {
+                        if (entry != null && entry.callback != null)
+                        {
+                            entry.callback.RemoveAllListeners();
+                            stripped++;
+                        }
+                    }
+                }
+
+                foreach (FieldInfo field in component.GetType().GetFields(
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    UnityEventBase unityEvent = null;
+                    try
+                    {
+                        unityEvent = field.GetValue(component) as UnityEventBase;
+                    }
+                    catch (Exception)
+                    {
+                        continue;
+                    }
+
+                    if (unityEvent != null)
+                    {
+                        unityEvent.RemoveAllListeners();
+                        stripped++;
+                    }
+                }
+            }
+
+            return stripped;
         }
 
         private static MenuButton BuildFallback(Transform parent, UnityAction onClick)
@@ -186,6 +256,10 @@ namespace SteelSoulRecovery.Ui
         }
 
         // 放到提示框里最靠下那个按钮的下面.
+        //
+        // 基准必须取"当前最靠下那个按钮"而不是克隆来源: 克隆源可能排在中间 (比如"是"),
+        // 按它算位置会把新按钮直接叠到下一个按钮上. 尺寸用世界坐标算, 因为这类按钮的实际大小
+        // 往往来自 anchor 而不是 sizeDelta.
         private static void Place(MenuButton created, MenuButton template, Transform root)
         {
             RectTransform rect = created.transform as RectTransform;
@@ -202,41 +276,61 @@ namespace SteelSoulRecovery.Ui
                 return;
             }
 
-            RectTransform reference = template != null ? template.transform as RectTransform : null;
-            if (reference == null)
+            RectTransform templateRect = template != null ? template.transform as RectTransform : null;
+            if (templateRect != null)
             {
-                reference = FindBottomButton(root);
+                rect.anchorMin = templateRect.anchorMin;
+                rect.anchorMax = templateRect.anchorMax;
+                rect.pivot = templateRect.pivot;
+                rect.sizeDelta = templateRect.sizeDelta;
             }
 
-            if (reference == null)
+            List<RectTransform> siblings = GetButtonRects(root);
+            if (siblings.Count == 0)
             {
-                rect.anchorMin = new Vector2(0.5f, 0f);
-                rect.anchorMax = new Vector2(0.5f, 0f);
-                rect.pivot = new Vector2(0.5f, 0f);
-                rect.sizeDelta = new Vector2(FallbackWidth, FallbackHeight);
-                rect.anchoredPosition = new Vector2(0f, 12f);
+                // 提示框里一个可克隆的按钮都没有: 自己搭一个, 尺寸按提示框本身的尺寸折算,
+                // 免得写死的像素值碰上被缩放的画布就变成一个小点.
+                RectTransform promptRect = root as RectTransform;
+                float width = promptRect != null && promptRect.rect.width > 0f ? promptRect.rect.width * 0.6f : FallbackWidth;
+                float height = promptRect != null && promptRect.rect.height > 0f ? promptRect.rect.height * 0.18f : FallbackHeight;
+
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(width, height);
+                rect.anchoredPosition = Vector2.zero;
                 return;
             }
 
-            rect.anchorMin = reference.anchorMin;
-            rect.anchorMax = reference.anchorMax;
-            rect.pivot = reference.pivot;
-            if (template != null)
+            siblings.Sort(CompareByWorldYDescending);
+            RectTransform lowest = siblings[siblings.Count - 1];
+            float lowestBottom = GetWorldBottom(lowest);
+
+            float ourHeight = GetWorldTop(rect) - GetWorldBottom(rect);
+            if (ourHeight <= 0f)
             {
-                rect.sizeDelta = reference.sizeDelta;
+                ourHeight = GetWorldTop(lowest) - lowestBottom;
             }
 
-            float referenceBottom = reference.anchoredPosition.y - reference.pivot.y * reference.sizeDelta.y;
-            rect.anchoredPosition = new Vector2(
-                reference.anchoredPosition.x,
-                referenceBottom - Gap - (1f - rect.pivot.y) * rect.sizeDelta.y);
+            float gap = EstimateGap(siblings, ourHeight);
+
+            float ourCenter = (GetWorldBottom(rect) + GetWorldTop(rect)) * 0.5f;
+            float desiredCenter = lowestBottom - gap - ourHeight * 0.5f;
+
+            created.transform.position += new Vector3(0f, desiredCenter - ourCenter, 0f);
+
+            SteelSoulRecoveryPlugin.Instance.Log.LogInfo(string.Format(
+                "恢复选项: 放到 {0} 下面 (间距 {1:0.###}, 高度 {2:0.###}, 摆好后 y {3:0.###} ~ {4:0.###})",
+                lowest.name,
+                gap,
+                ourHeight,
+                GetWorldBottom(rect),
+                GetWorldTop(rect)));
         }
 
-        private static RectTransform FindBottomButton(Transform root)
+        private static List<RectTransform> GetButtonRects(Transform root)
         {
-            RectTransform lowest = null;
-            float lowestEdge = float.MaxValue;
-
+            List<RectTransform> result = new List<RectTransform>();
             foreach (MenuButton button in root.GetComponentsInChildren<MenuButton>(true))
             {
                 if (button.GetComponent<PromptOptionMarker>() != null)
@@ -245,20 +339,56 @@ namespace SteelSoulRecovery.Ui
                 }
 
                 RectTransform rect = button.transform as RectTransform;
-                if (rect == null)
+                if (rect != null)
                 {
-                    continue;
-                }
-
-                float edge = rect.anchoredPosition.y - rect.pivot.y * rect.sizeDelta.y;
-                if (edge < lowestEdge)
-                {
-                    lowestEdge = edge;
-                    lowest = rect;
+                    result.Add(rect);
                 }
             }
 
-            return lowest;
+            return result;
+        }
+
+        private static int CompareByWorldYDescending(RectTransform left, RectTransform right)
+        {
+            return right.position.y.CompareTo(left.position.y);
+        }
+
+        // 用最下面两个按钮的间距当间距, 这样新按钮和原有按钮的疏密一致.
+        // 这里的数值是画布内部的世界单位 (会被画布缩放), 所以判断标准必须相对按钮高度, 不能用绝对像素:
+        // 之前用过 "间距 > 0.5 才算数", 结果把缩放后真实间距不到 0.5 的情况当成无效, 退回到写死的 6,
+        // 于是按钮被推到很下面是去了.
+        private static float EstimateGap(List<RectTransform> orderedByYDescending, float buttonHeight)
+        {
+            float fallback = buttonHeight > 0f ? buttonHeight * GapRatio : GapRatio;
+
+            if (orderedByYDescending.Count < 2)
+            {
+                return fallback;
+            }
+
+            RectTransform upper = orderedByYDescending[orderedByYDescending.Count - 2];
+            RectTransform lower = orderedByYDescending[orderedByYDescending.Count - 1];
+            float gap = GetWorldBottom(upper) - GetWorldTop(lower);
+            if (gap > 0f && gap < buttonHeight * 4f)
+            {
+                return gap;
+            }
+
+            return fallback;
+        }
+
+        private static float GetWorldBottom(RectTransform rect)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Mathf.Min(corners[0].y, corners[1].y, corners[2].y, corners[3].y);
+        }
+
+        private static float GetWorldTop(RectTransform rect)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Mathf.Max(corners[0].y, corners[1].y, corners[2].y, corners[3].y);
         }
 
         // 让新按钮进入提示框的上下(或左右)导航链.

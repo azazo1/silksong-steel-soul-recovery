@@ -24,7 +24,11 @@ instance source:
 launch:
     pwsh -File game/launch-instance.ps1
 
-# 往隔离子实例写一份"碎掉的钢魂存档"用于测试
+# 解锁新建存档时的钢魂模式选项
+steel-soul-on:
+    pwsh -File tools/set-status-record.ps1 -Key RecPermadeathMode -Value 1
+
+# 往实例的 1 号槽位写一份"碎掉的钢魂存档"用于测试
 # just test-save 1
 test-save slot='1':
     pwsh -File tools/make-test-save.ps1 -Slot {{slot}} -Force

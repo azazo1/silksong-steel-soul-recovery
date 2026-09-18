@@ -41,11 +41,17 @@ else {
     Write-Host '[instance] Steam 接入: 已断开 (steam_api64.dll 被改名)'
 }
 
+# Unity 的 Player.log 是引擎在托管代码跑起来之前写的, 位置由构建时的公司名决定.
+# 用引擎自带的 -logFile 参数把它指到实例目录里, 这样受限环境下也能写得进去, 不必去动 app.info.
+# 路径里有空格, 必须自己带引号, 否则 Unity 的命令行解析会在空格处截断.
+$unityLog = Join-Path $Target 'Player.log'
+
 Write-Host "[instance] 启动: $exe"
-$process = Start-Process -FilePath $exe -WorkingDirectory $Target -PassThru
+$process = Start-Process -FilePath $exe -ArgumentList @('-logFile', "`"$unityLog`"") -WorkingDirectory $Target -PassThru
 
 if (-not $Wait) {
-    Write-Host "[instance] 进程号 $($process.Id), 日志: $(Join-Path $Target 'BepInEx\LogOutput.log')"
+    Write-Host "[instance] 进程号 $($process.Id), 引擎日志: $unityLog"
+    Write-Host "[instance] BepInEx 日志: $(Join-Path $Target 'BepInEx\LogOutput.log')"
     return
 }
 

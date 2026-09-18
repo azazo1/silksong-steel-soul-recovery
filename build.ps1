@@ -1,4 +1,9 @@
-# 编译 SteelSoulRecovery 插件.
+# 编译插件.
+#
+# 两个产物:
+#   SteelSoulRecovery.dll  -- 本仓库的主角, 钢魂存档恢复
+#   InstancePrefs.dll      -- 隔离子实例的工具插件, 把游戏的 PlayerPrefs 重定向到实例存档目录下的文本文件
+#                             (源码在 game/instance-prefs/, 不属于 mod 本体, 详情见那里)
 #
 # 本机没有装 .NET SDK, 因此直接调用 Visual Studio 自带的 Roslyn csc.exe 编译,
 # 引用游戏目录中的程序集与 BepInEx 自带的 Harmony.
@@ -8,7 +13,7 @@
 #   pwsh -File build.ps1 -Install
 #   pwsh -File build.ps1 -Install -GameDir 'D:\games\steam\common\Hollow Knight Silksong'
 #
-# -Install 会把编译结果复制到 <游戏目录>/BepInEx/plugins/SteelSoulRecovery/.
+# -Install 会把两个 dll 分别复制到 <游戏目录>/BepInEx/plugins/<名字>/.
 # -GameDir 可以给相对路径, 相对本目录解析, 与 MSBuild 导入 SilksongPath.props 时的基准一致.
 [CmdletBinding()]
 param(
@@ -21,9 +26,18 @@ $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
 $outputDir = Join-Path $root 'bin'
-$outputDll = Join-Path $outputDir 'SteelSoulRecovery.dll'
-$sourceDir = Join-Path $root 'src'
-$pluginFolderName = 'SteelSoulRecovery'
+
+# 名字 -> 源码目录. 每个项目编成一个同名 dll, 装到 BepInEx/plugins/<名字>/ 下.
+$projects = @(
+    [pscustomobject]@{
+        Name = 'SteelSoulRecovery'
+        SourceDir = Join-Path $root 'src'
+    },
+    [pscustomobject]@{
+        Name = 'InstanceTools'
+        SourceDir = Join-Path $root 'game\instance-tools\src'
+    }
+)
 
 function Write-Step {
     param([string]$Message)
@@ -120,39 +134,43 @@ foreach ($reference in $references) {
     }
 }
 
-$sources = Get-ChildItem -LiteralPath $sourceDir -Recurse -Filter '*.cs' | Sort-Object FullName | ForEach-Object { $_.FullName }
-if ($sources.Count -eq 0) {
-    throw "没有找到源文件: $sourceDir"
-}
-
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
-$arguments = @(
-    '/nologo'
-    '/target:library'
-    '/langversion:7.3'
-    '/optimize+'
-    '/deterministic+'
-    "/out:$outputDll"
-)
-foreach ($reference in $references) {
-    $arguments += "/r:$reference"
+foreach ($project in $projects) {
+    $sources = Get-ChildItem -LiteralPath $project.SourceDir -Recurse -Filter '*.cs' |
+        Sort-Object FullName |
+        ForEach-Object { $_.FullName }
+    if ($sources.Count -eq 0) {
+        throw "没有找到源文件: $($project.SourceDir)"
+    }
+
+    $outputDll = Join-Path $outputDir "$($project.Name).dll"
+
+    $arguments = @(
+        '/nologo'
+        '/target:library'
+        '/langversion:7.3'
+        '/optimize+'
+        '/deterministic+'
+        "/out:$outputDll"
+    )
+    foreach ($reference in $references) {
+        $arguments += "/r:$reference"
+    }
+    $arguments += $sources
+
+    Write-Step "编译 $($project.Name): $($sources.Count) 个源文件 ..."
+    & $compiler @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "csc 编译失败 ($($project.Name), exit=$LASTEXITCODE)"
+    }
+
+    Write-Step "产物: $outputDll"
+
+    if ($Install) {
+        $pluginDir = Join-Path $gameDir "BepInEx\plugins\$($project.Name)"
+        New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+        Copy-Item -LiteralPath $outputDll -Destination (Join-Path $pluginDir "$($project.Name).dll") -Force
+        Write-Step "已安装插件: $pluginDir"
+    }
 }
-$arguments += $sources
-
-Write-Step "编译 $($sources.Count) 个源文件 ..."
-& $compiler @arguments
-if ($LASTEXITCODE -ne 0) {
-    throw "csc 编译失败 (exit=$LASTEXITCODE)"
-}
-
-Write-Step "产物: $outputDll"
-
-if (-not $Install) {
-    return
-}
-
-$pluginDir = Join-Path $gameDir "BepInEx\plugins\$pluginFolderName"
-New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
-Copy-Item -LiteralPath $outputDll -Destination (Join-Path $pluginDir 'SteelSoulRecovery.dll') -Force
-Write-Step "已安装插件: $pluginDir"

@@ -3,10 +3,15 @@
 # 实例目录: <本脚本所在目录>/Hollow Knight Silksong/
 #   - 共享 (目录联接, 不占额外空间): <exe>_Data 下的 Managed/Resources/StreamingAssets, 以及根目录的 MonoBleedingEdge/D3D12
 #   - 独立 (真实副本): 可执行文件, doorstop 文件, BepInEx/, <exe>_Data 下的配置与小数据文件
-#   - 隔离存档: 改写实例的 _Data/app.info 里的公司名 (默认 "Team Cherry Mod"),
-#     实例的存档与游戏设置落到 %USERPROFILE%\AppData\LocalLow\<公司名>\<产品名>, 与源安装互不影响
+#   - 隔离存档与日志: 由实例的 InstanceTools 插件在代码层接管, 不需要改游戏文件, 也不需要提权:
+#       Application.persistentDataPath -> <实例目录>/savedata (存档与 AppConfig 都落这里)
+#       PlayerPrefs                     -> <实例目录>/savedata/instance-prefs.txt
+#       File.Replace                    -> Copy/Delete/Move 等价实现 (受限环境下 Replace 会被拒)
+#     Player.log 由启动脚本用引擎自带的 -logFile 指到 <实例目录>/Player.log.
 #   - 隔离 Steam: 默认把实例的 steam_api64.dll 改名为 steam_api64.dll.disabled,
 #     使 SteamAPI.Init 失败, 测试期间的成就/云存档/时长都不会落到你的账号上
+#
+# 本脚本只负责游戏本体; 存档路径的隔离在游戏侧由 game/instance-tools 完成.
 #
 # 用法:
 #   pwsh -File game/prepare-instance.ps1 -Source <源安装目录>   # 首次创建; 之后重跑只补齐缺失内容
@@ -23,7 +28,6 @@
 param(
     [string]$Source = $env:SILKSONG_GAME_DIR,
     [string]$Target = (Join-Path $PSScriptRoot 'Hollow Knight Silksong'),
-    [string]$CompanyName = 'Team Cherry Mod',
     [switch]$KeepSteam,
     [switch]$FullCopy,
     [switch]$RefreshBinaries,
@@ -189,27 +193,6 @@ function Copy-DirectoryContents {
     Write-Step "复制 $(Split-Path -Leaf $FromDirectory): 新增/覆盖 $copied 个, 保留已有 $kept 个"
 }
 
-function Set-InstanceAppInfo {
-    param(
-        [string]$SourceAppInfo,
-        [string]$InstanceAppInfo,
-        [string]$CompanyName
-    )
-
-    $lines = @(Get-Content -LiteralPath $SourceAppInfo)
-    if ($lines.Count -lt 2) {
-        throw "app.info 格式不认识: $SourceAppInfo"
-    }
-    $productName = $lines[1].Trim()
-    $content = "$CompanyName`n$productName`n"
-    $current = if (Test-Path -LiteralPath $InstanceAppInfo) { Get-Content -LiteralPath $InstanceAppInfo -Raw } else { '' }
-    if ($current -ne $content) {
-        Set-Content -LiteralPath $InstanceAppInfo -Value $content -NoNewline -Encoding utf8
-        Write-Step "改写 app.info: 公司名 $CompanyName, 产品名 $productName"
-    }
-    return $productName
-}
-
 function Set-SteamDllState {
     param(
         [string]$PluginsDirectory,
@@ -305,9 +288,6 @@ if (Test-Path -LiteralPath $sourcePlugins) {
     Copy-DirectoryContents -FromDirectory $sourcePlugins -ToDirectory $instancePlugins -Overwrite:$RefreshBinaries
 }
 
-$productName = Set-InstanceAppInfo -SourceAppInfo (Join-Path $sourceData 'app.info') `
-    -InstanceAppInfo (Join-Path $instanceData 'app.info') -CompanyName $CompanyName
-
 Set-SteamDllState -PluginsDirectory (Join-Path $instancePlugins 'x86_64') -KeepSteam:$KeepSteam
 
 $rootCopied = 0
@@ -336,11 +316,9 @@ $realFiles = Get-ChildItem -LiteralPath $target -Recurse -Force -File |
                    $_.FullName -notlike "$target\MonoBleedingEdge\*" -and
                    $_.FullName -notlike "$target\D3D12\*" }
 
-$saveRoot = Join-Path $env:USERPROFILE "AppData\LocalLow\$CompanyName\$productName"
-
 Write-Step '实例就绪.'
 Write-Step "真实占用: $($realFiles.Count) 个文件, $([math]::Round((($realFiles | Measure-Object Length -Sum).Sum)/1MB, 1)) MB"
-Write-Step "存档目录: $saveRoot"
+Write-Step "存档目录 (由实例里的 InstanceTools 接管): $(Join-Path $target 'savedata\default')"
 Write-Step "Steam 接入: $(if ($KeepSteam -or (Test-Path -LiteralPath (Join-Path $instancePlugins "x86_64\$steamDllName"))) { '启用' } else { '已断开' })"
 Write-Step '启动: pwsh -File game/launch-instance.ps1'
 Write-Step "插件目录: $(Join-Path $target 'BepInEx\plugins')"
