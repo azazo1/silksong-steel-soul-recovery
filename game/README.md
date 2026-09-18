@@ -1,7 +1,7 @@
 # 丝之歌隔离子实例
 
 `game/Hollow Knight Silksong/` 是从 Steam 安装复制出来的游戏子实例, 用来单独启动和测试插件, 不动源安装.
-脚本从 `silksong-rl/game/` 搬过来, 只把写死的源安装路径换成了 `-Source` / `SILKSONG_GAME_DIR`.
+源安装目录由 `-Source` 或环境变量 `SILKSONG_GAME_DIR` 指定, 不写死在脚本里.
 
 ## 隔离了什么
 

@@ -24,6 +24,11 @@ instance source:
 launch:
     pwsh -File game/launch-instance.ps1
 
+# 往隔离子实例写一份"碎掉的钢魂存档"用于测试
+# just test-save 1
+test-save slot='1':
+    pwsh -File tools/make-test-save.ps1 -Slot {{slot}} -Force
+
 # 启动隔离子实例并等它退出, 退出后打印 BepInEx 日志尾部
 launch-wait:
     pwsh -File game/launch-instance.ps1 -Wait

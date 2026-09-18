@@ -52,7 +52,7 @@
 | `build.ps1` | 编译 (调用 Visual Studio 自带的 Roslyn csc), `-Install` 会复制到游戏的 `BepInEx/plugins` |
 | `SilksongPath.props` | 本机游戏目录, 不入版本库 |
 | `game/` | 隔离子实例脚本, 详见 `game/README.md` |
-| `tools/` | 存档编解码与"造一份碎掉的钢魂存档"的脚本 |
+| `tools/` | 存档编解码, 自带一份测试用存档模板, 以及"造一份碎掉的钢魂存档"的脚本 |
 
 ## 构建与测试
 
@@ -67,10 +67,10 @@ just launch
 just log 120
 ```
 
-没有现成的钢魂存档时, 可以造一份 (拿 `silksong-rl` 里 boss-rush 自带的存档改 `permadeathMode`):
+没有现成的钢魂存档时, 可以造一份: 仓库自带一份存档模板, 脚本只改里面的 `permadeathMode` 再写进实例的槽位.
 
 ```shell
-pwsh -File tools/make-test-save.ps1 -Source '<silksong-rl>/mods/boss-rush/BossScenes/BossSave/苔藓之母.json.gz' -Slot 1
+pwsh -File tools/make-test-save.ps1 -Slot 1
 ```
 
 ## 排查

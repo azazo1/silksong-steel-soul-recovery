@@ -1,18 +1,18 @@
 # 造一份"碎掉的钢魂存档", 用来在没有真存档的情况下测插件.
 #
 # 做法: 把源存档解成 JSON, 只改 playerData.permadeathMode, 再按游戏格式写回第 N 号槽位.
-# 源存档可以是 silksong-rl 里 boss-rush 自带的 BossScenes/BossSave/*.json.gz,
-# 也可以是任意一份 user<N>.dat.
+# 源存档可以是任意一份 .dat, 也可以是 gzip 过的存档 JSON (.json.gz);
+# 不给 -Source 就用仓库自带的模板 tools/template/steel-soul-dead.json.gz.
 #
 # 用法:
-#   pwsh -File tools/make-test-save.ps1 -Source '<...>/BossSave/苔藓之母.json.gz' -Slot 1
+#   pwsh -File tools/make-test-save.ps1 -Slot 1
 #   pwsh -File tools/make-test-save.ps1 -Source '<一份 user2.dat>' -Slot 2 -Mode On -Force
 #
 # 默认写到隔离子实例 (公司名 Team Cherry Mod) 的存档目录, 不会碰真存档.
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$Source,
+    [string]$Source = (Join-Path $PSScriptRoot 'template\steel-soul-dead.json.gz'),
     [string]$SaveDir = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Team Cherry Mod\Hollow Knight Silksong\default'),
     [int]$Slot = 1,
     [ValidateSet('Dead', 'On', 'Off')][string]$Mode = 'Dead',
