@@ -1,0 +1,6 @@
+<Project>
+  <!-- 复制成 SilksongPath.props 并改成自己的游戏目录, 该文件不入版本库. -->
+  <PropertyGroup>
+    <GameDir>game/Hollow Knight Silksong</GameDir>
+  </PropertyGroup>
+</Project>
