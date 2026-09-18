@@ -11,10 +11,11 @@
 # 用法:
 #   pwsh -File build.ps1
 #   pwsh -File build.ps1 -Install
-#   pwsh -File build.ps1 -Install -GameDir 'D:\games\steam\common\Hollow Knight Silksong'
+#   pwsh -File build.ps1 -Install -GameDir '<游戏目录>'
 #
-# -Install 会把两个 dll 分别复制到 <游戏目录>/BepInEx/plugins/<名字>/.
-# -GameDir 可以给相对路径, 相对本目录解析, 与 MSBuild 导入 SilksongPath.props 时的基准一致.
+# -Install 会把两个 dll 分别复制到游戏目录下的 BepInEx\plugins\<插件名>\.
+# -GameDir 指向游戏目录 (含 Hollow Knight Silksong.exe 与 Hollow Knight Silksong_Data 的那一层),
+# 可以给相对路径, 相对本目录解析, 与 MSBuild 导入 SilksongPath.props 时的基准一致.
 [CmdletBinding()]
 param(
     [string]$GameDir,

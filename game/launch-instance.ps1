@@ -4,8 +4,10 @@
 #   pwsh -File game/launch-instance.ps1          # 后台启动, 立即返回
 #   pwsh -File game/launch-instance.ps1 -Wait    # 等游戏退出, 然后打印 BepInEx 日志尾部
 #
-# 实例已经做过两层隔离:
-#   - 存档与游戏设置: 由实例自己的 _Data/app.info 决定, 落在 LocalLow\<公司名>\<产品名>, 与源安装分开.
+# 实例已经做过三层隔离 (实例目录 = 仓库里的 game\Hollow Knight Silksong, 层级说明见 game/README.md):
+#   - 存档与设置: 由实例里的 InstanceTools 插件接管 Application.persistentDataPath, 落在 <实例目录>\savedata,
+#     与源安装完全分开; PlayerPrefs 也一并重定向到那个目录下的文本文件.
+#   - 引擎日志: 由下面的 -logFile 参数指到 <实例目录>\Player.log.
 #   - Steam 接入: steam_api64.dll 被改名为 .disabled 时, 游戏不会连 Steam,
 #     测试期间的成就/云存档/游戏时长都不会落到你的账号上; 需要恢复就用 prepare-instance.ps1 -KeepSteam.
 
@@ -26,12 +28,8 @@ if (-not (Test-Path -LiteralPath $exe)) {
 $dataDirectory = Get-ChildItem -LiteralPath $Target -Force -Directory |
     Where-Object { $_.Name -like '*_Data' } |
     Select-Object -First 1
-$appInfo = Join-Path $dataDirectory.FullName 'app.info'
-if (Test-Path -LiteralPath $appInfo) {
-    $lines = @(Get-Content -LiteralPath $appInfo)
-    $saveRoot = Join-Path $env:USERPROFILE "AppData\LocalLow\$($lines[0].Trim())\$($lines[1].Trim())"
-    Write-Host "[instance] 存档与设置目录: $saveRoot"
-}
+
+Write-Host "[instance] 存档目录: $(Join-Path $Target 'savedata\default')"
 
 $steamDll = Join-Path $dataDirectory.FullName 'Plugins\x86_64\steam_api64.dll'
 if (Test-Path -LiteralPath $steamDll) {

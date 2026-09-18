@@ -11,12 +11,12 @@ install:
     pwsh -File build.ps1 -Install
 
 # 编译并安装到指定游戏目录
-# just install-to 'D:\games\steam\common\Hollow Knight Silksong'
+# just install-to '<游戏目录>'
 install-to gamedir:
     pwsh -File build.ps1 -Install -GameDir '{{gamedir}}'
 
-# 创建或补齐隔离子实例, 需要 -Source 指向源安装
-# just instance 'D:\games\steam\common\Hollow Knight Silksong'
+# 创建或补齐隔离子实例
+# just instance '<源安装>'
 instance source:
     pwsh -File game/prepare-instance.ps1 -Source '{{source}}'
 

@@ -1,7 +1,7 @@
 # 定位隔离子实例的存档目录.
 #
 # 实例的存档目录由实例里的 InstanceTools 插件接管: 它把 Application.persistentDataPath
-# 重定向到 <实例目录>/savedata, 游戏的存档就在那里的 default 子目录下.
+# 重定向到 <实例目录>/savedata (层级说明见 game/README.md), 游戏的存档就在那里的 default 子目录下.
 # 这里不去读 app.info, 也不做任何联接解析 -- 存档就是仓库里的普通文件.
 
 function Get-InstanceRoot {

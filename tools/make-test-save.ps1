@@ -8,7 +8,7 @@
 #   pwsh -File tools/make-test-save.ps1 -Slot 1
 #   pwsh -File tools/make-test-save.ps1 -Source '<一份 user2.dat>' -Slot 2 -Mode On -Force
 #
-# -SaveDir 缺省取隔离子实例的存档目录 (读实例 app.info 现算), 不会碰真存档.
+# -SaveDir 缺省取隔离子实例的存档目录 (实例里的 savedata), 不会碰真存档.
 
 [CmdletBinding()]
 param(

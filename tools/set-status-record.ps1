@@ -10,9 +10,9 @@
 #
 # 用法:
 #   pwsh -File tools/set-status-record.ps1 -Key RecPermadeathMode -Value 1
-#   pwsh -File tools/set-status-record.ps1 -Key RecPermadeathMode -Value 1 -SaveDir '<存档目录>'
+#   pwsh -File tools/set-status-record.ps1 -Key RecPermadeathMode -Value 1 -SaveDir '<实例目录>\savedata\default'
 #
-# -SaveDir 缺省取隔离子实例的存档目录 (读实例 app.info 现算), 不会碰真存档.
+# -SaveDir 缺省取隔离子实例的存档目录 (实例里的 savedata), 不会碰真存档.
 # 改的时候游戏必须关掉, 否则游戏退出时会用自己的内存状态把文件覆盖回去.
 
 [CmdletBinding()]

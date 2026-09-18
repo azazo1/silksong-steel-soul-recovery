@@ -1,6 +1,15 @@
 # 丝之歌隔离子实例
 
 `game/Hollow Knight Silksong/` 是从 Steam 安装复制出来的游戏子实例, 用来单独启动和测试插件, 不动源安装.
+
+下文出现的路径都指到具体层级:
+
+| 写法 | 指的是 |
+| --- | --- |
+| `<Steam 库>\steamapps\common\Hollow Knight Silksong` | 源安装 (游戏目录), 含 `Hollow Knight Silksong.exe` 与 `Hollow Knight Silksong_Data` 的那一层; 给它一个指向别处的链接也可以 |
+| `game/Hollow Knight Silksong` | 隔离子实例的根目录 (本仓库内) |
+| `game/Hollow Knight Silksong/savedata/default` | 实例的存档目录, 游戏里的 1..4 号槽位就是这里的 `user1.dat` ... `user4.dat` |
+
 源安装目录由 `-Source` 或环境变量 `SILKSONG_GAME_DIR` 指定, 不写死在脚本里.
 
 ## 隔离了什么
@@ -8,9 +17,9 @@
 | 隔离项 | 做法 | 效果 |
 | --- | --- | --- |
 | 游戏本体 | 只读数据目录做目录联接, 其余走真实副本 | 往实例装插件, 改配置, 写日志都不碰源安装 |
-| 存档与设置 | 实例里的 `InstanceTools` 插件在代码层接管 `Application.persistentDataPath` | 存档与设置落在 `<实例目录>/savedata`, 真存档不会被读也不会被写 |
+| 存档与设置 | 实例里的 `InstanceTools` 插件在代码层接管 `Application.persistentDataPath` | 存档与设置落在 `game/Hollow Knight Silksong/savedata`, 真存档不会被读也不会被写 |
 | PlayerPrefs | 同上插件把读写重定向到 `savedata/instance-prefs.txt` | 不写注册表 `HKCU\Software\<公司名>\<产品名>` |
-| 引擎日志 | 启动脚本用引擎自带的 `-logFile` 指定 | `Player.log` 落在 `<实例目录>/Player.log` |
+| 引擎日志 | 启动脚本用引擎自带的 `-logFile` 指定 | `Player.log` 落在 `game/Hollow Knight Silksong/Player.log` |
 | Steam 接入 | 实例的 `_Data/Plugins/x86_64/steam_api64.dll` 改名为 `steam_api64.dll.disabled` | 游戏连不上 Steam, 测试期间的成就/云存档/游戏时长都不落账 |
 
 共享 (目录联接, 不占额外空间): `<exe>_Data` 下的 `Managed`, `Resources`, `StreamingAssets`, 以及根目录的 `MonoBleedingEdge`, `D3D12`.
@@ -39,7 +48,7 @@
 
 ```shell
 # 首次创建, 之后重跑只补齐缺失内容
-pwsh -File game/prepare-instance.ps1 -Source 'D:\games\steam\common\Hollow Knight Silksong'
+pwsh -File game/prepare-instance.ps1 -Source '<源安装>'
 
 # 源安装更新后, 覆盖刷新可执行文件与 BepInEx 基础文件
 pwsh -File game/prepare-instance.ps1 -Source '<源安装>' -RefreshBinaries

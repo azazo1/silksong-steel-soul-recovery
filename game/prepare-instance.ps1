@@ -1,6 +1,7 @@
 # 创建或刷新一份与源安装隔离的丝之歌游戏子实例.
 #
-# 实例目录: <本脚本所在目录>/Hollow Knight Silksong/
+# 实例目录: game/Hollow Knight Silksong/ (相对本仓库根目录, 即本脚本所在目录下的同名子目录;
+# 路径层级的完整说明见 game/README.md, 这里只讲本脚本做什么)
 #   - 共享 (目录联接, 不占额外空间): <exe>_Data 下的 Managed/Resources/StreamingAssets, 以及根目录的 MonoBleedingEdge/D3D12
 #   - 独立 (真实副本): 可执行文件, doorstop 文件, BepInEx/, <exe>_Data 下的配置与小数据文件
 #   - 隔离存档与日志: 由实例的 InstanceTools 插件在代码层接管, 不需要改游戏文件, 也不需要提权:
@@ -14,13 +15,13 @@
 # 本脚本只负责游戏本体; 存档路径的隔离在游戏侧由 game/instance-tools 完成.
 #
 # 用法:
-#   pwsh -File game/prepare-instance.ps1 -Source <源安装目录>   # 首次创建; 之后重跑只补齐缺失内容
-#   pwsh -File game/prepare-instance.ps1 -RefreshBinaries      # 源安装更新后, 覆盖刷新可执行文件与 BepInEx 基础文件
-#   pwsh -File game/prepare-instance.ps1 -FullCopy             # 连数据目录也完整复制 (约 7.8 GB), 隔离最彻底
-#   pwsh -File game/prepare-instance.ps1 -KeepSteam            # 保留 Steam 接入, 只做存档隔离
-#   pwsh -File game/prepare-instance.ps1 -Force                # 删除已有实例后重建
+#   pwsh -File game/prepare-instance.ps1 -Source '<源安装>'   # 首次创建; 之后重跑只补齐缺失内容
+#   pwsh -File game/prepare-instance.ps1 -RefreshBinaries     # 源安装更新后, 覆盖刷新可执行文件与 BepInEx 基础文件
+#   pwsh -File game/prepare-instance.ps1 -FullCopy            # 连数据目录也完整复制 (约 7.8 GB), 隔离最彻底
+#   pwsh -File game/prepare-instance.ps1 -KeepSteam           # 保留 Steam 接入, 只做存档隔离
+#   pwsh -File game/prepare-instance.ps1 -Force               # 删除已有实例后重建
 #
-# -Source 缺省取环境变量 SILKSONG_GAME_DIR, 本机路径不写死在仓库里.
+# -Source 指向源安装的游戏目录, 缺省取环境变量 SILKSONG_GAME_DIR, 本机路径不写死在仓库里.
 #
 # 注意: 共享目录是只读用的, 如果某个 mod 会往数据目录里写文件, 请改用 -FullCopy.
 
